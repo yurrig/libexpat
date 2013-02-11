@@ -2,28 +2,17 @@
    See the file COPYING for copying permission.
 */
 
+#define XML_BUILDING_EXPAT 1
+#include "expat.h"
+
 #include <stddef.h>
 #include <string.h>                     /* memset(), memcpy() */
 #include <assert.h>
 #include <limits.h>                     /* UINT_MAX */
 #include <time.h>                       /* time() */
-
-#define XML_BUILDING_EXPAT 1
-
-#ifdef COMPILED_FROM_DSP
-#include "winconfig.h"
-#elif defined(MACOS_CLASSIC)
-#include "macconfig.h"
-#elif defined(__amigaos__)
-#include "amigaconfig.h"
-#elif defined(__WATCOMC__)
-#include "watcomconfig.h"
-#elif defined(HAVE_EXPAT_CONFIG_H)
-#include <expat_config.h>
-#endif /* ndef COMPILED_FROM_DSP */
+#include <errno.h>
 
 #include "ascii.h"
-#include "expat.h"
 
 #ifdef XML_UNICODE
 #define XML_ENCODE_MAX XML_UTF16_ENCODE_MAX
@@ -140,6 +129,18 @@ typedef struct {
 #define INIT_BUFFER_SIZE 1024
 
 #define EXPAND_SPARE 24
+
+#ifdef XML_BOMB_PROTECTION
+static struct {
+    unsigned int defaultMaxEntityIndirections;
+    unsigned int defaultMaxEntityExpansions;
+    XML_Bool defaultResetDTDFlag;
+} feature_settings = {
+    XML_DEFAULT_MAX_ENTITY_INDIRECTIONS,
+    XML_DEFAULT_MAX_ENTITY_EXPANSIONS,
+    XML_DEFAULT_DTD_RESET
+};
+#endif
 
 typedef struct binding {
   struct prefix *prefix;
@@ -557,6 +558,13 @@ struct XML_ParserStruct {
   enum XML_ParamEntityParsing m_paramEntityParsing;
 #endif
   unsigned long m_hash_secret_salt;
+#ifdef XML_BOMB_PROTECTION
+  unsigned int m_entityIndirections;
+  unsigned int m_maxEntityIndirections;
+  unsigned int m_entityExpansions;
+  unsigned int m_maxEntityExpansions;
+  XML_Bool m_resetDTDFlag;
+#endif /* XML_BOMB_PROTECTION */
 };
 
 #define MALLOC(s) (parser->m_mem.malloc_fcn((s)))
@@ -666,6 +674,13 @@ struct XML_ParserStruct {
 #define paramEntityParsing (parser->m_paramEntityParsing)
 #endif /* XML_DTD */
 #define hash_secret_salt (parser->m_hash_secret_salt)
+#ifdef XML_BOMB_PROTECTION
+#define entityIndirections (parser->m_entityIndirections)
+#define maxEntityIndirections (parser->m_maxEntityIndirections)
+#define entityExpansions (parser->m_entityExpansions)
+#define maxEntityExpansions (parser->m_maxEntityExpansions)
+#define resetDTDFlag (parser->m_resetDTDFlag)
+#endif /* XML_BOMB_PROTECTION */
 
 XML_Parser XMLCALL
 XML_ParserCreate(const XML_Char *encodingName)
@@ -756,6 +771,13 @@ parserCreate(const XML_Char *encodingName,
 
   buffer = NULL;
   bufferLim = NULL;
+#ifdef XML_BOMB_PROTECTION
+  entityIndirections = 0;
+  maxEntityIndirections = feature_settings.defaultMaxEntityIndirections;
+  entityExpansions = 0;
+  maxEntityExpansions = feature_settings.defaultMaxEntityExpansions;
+  resetDTDFlag = feature_settings.defaultResetDTDFlag;
+#endif
 
   attsSize = INIT_ATTS_SIZE;
   atts = (ATTRIBUTE *)MALLOC(attsSize * sizeof(ATTRIBUTE));
@@ -1886,6 +1908,112 @@ XML_GetCurrentColumnNumber(XML_Parser parser)
   return position.columnNumber;
 }
 
+int XMLCALL
+XML_GetFeature(XML_Parser parser, enum XML_FeatureEnum feature, long *value) {
+  switch (feature) {
+#ifdef XML_BOMB_PROTECTION
+  case XML_FEATURE_MAX_ENTITY_INDIRECTIONS:
+    *value = (long)maxEntityIndirections;
+    return 1;
+  case XML_FEATURE_MAX_ENTITY_EXPANSIONS:
+    *value = (long)maxEntityExpansions;
+    return 1;
+  case XML_FEATURE_RESET_DTD:
+    *value = (long)resetDTDFlag;
+    return 1;
+#endif
+  default:
+    errno = ENOENT;
+    return 0;
+  }
+}
+
+int XMLCALL
+XML_SetFeature(XML_Parser parser, enum XML_FeatureEnum feature, long value) {
+  switch (feature) {
+#ifdef XML_BOMB_PROTECTION
+  case XML_FEATURE_MAX_ENTITY_INDIRECTIONS:
+    if ((value < 0) || (value > UINT_MAX)) {
+      errno = EINVAL;
+      return 0;
+    }
+    maxEntityIndirections = (unsigned int)value;
+    return 1;
+  case XML_FEATURE_MAX_ENTITY_EXPANSIONS:
+    if ((value < 0) || (value > UINT_MAX)) {
+      errno = EINVAL;
+      return 0;
+    }
+    maxEntityExpansions = (unsigned int)value;
+    return 1;
+  case XML_FEATURE_RESET_DTD:
+    if ((value == 0) || (value == 1)) {
+      resetDTDFlag = (XML_Bool)value;
+      return 1;
+    } else {
+      errno = EINVAL;
+      return 0;
+    }
+#endif
+  default:
+    errno = ENOENT;
+    return 0;
+  }
+}
+
+int XMLCALL
+XML_GetFeatureDefault(enum XML_FeatureEnum feature, long *value) {
+  switch (feature) {
+#ifdef XML_BOMB_PROTECTION
+  case XML_FEATURE_MAX_ENTITY_INDIRECTIONS:
+    *value = (long)feature_settings.defaultMaxEntityIndirections;
+    return 1;
+  case XML_FEATURE_MAX_ENTITY_EXPANSIONS:
+    *value = (long)feature_settings.defaultMaxEntityExpansions;
+    return 1;
+  case XML_FEATURE_RESET_DTD:
+    *value = (long)feature_settings.defaultResetDTDFlag;
+    return 1;
+#endif
+  default:
+    errno = ENOENT;
+    return 0;
+  }
+}
+
+int XMLCALL
+XML_SetFeatureDefault(enum XML_FeatureEnum feature, long value) {
+  switch (feature) {
+#ifdef XML_BOMB_PROTECTION
+  case XML_FEATURE_MAX_ENTITY_INDIRECTIONS:
+    if ((value < 0) || (value > UINT_MAX)) {
+      errno = EINVAL;
+      return 0;
+    }
+    feature_settings.defaultMaxEntityIndirections = (unsigned int)value;
+    return 1;
+  case XML_FEATURE_MAX_ENTITY_EXPANSIONS:
+    if ((value < 0) || (value > UINT_MAX)) {
+      errno = EINVAL;
+      return 0;
+    }
+    feature_settings.defaultMaxEntityExpansions = (unsigned int)value;
+    return 1;
+  case XML_FEATURE_RESET_DTD:
+    if ((value == 0) || (value == 1)) {
+      feature_settings.defaultResetDTDFlag = (XML_Bool)value;
+      return 1;
+    } else {
+      errno = EINVAL;
+      return 0;
+    }
+#endif
+  default:
+    errno = ENOENT;
+    return 0;
+  }
+}
+
 void XMLCALL
 XML_FreeContentModel(XML_Parser parser, XML_Content *model)
 {
@@ -1969,6 +2097,11 @@ XML_ErrorString(enum XML_Error code)
     XML_L("reserved prefix (xml) must not be undeclared or bound to another namespace name"),
     XML_L("reserved prefix (xmlns) must not be declared or undeclared"),
     XML_L("prefix must not be bound to one of the reserved namespace names")
+#ifdef XML_BOMB_PROTECTION
+    ,
+    XML_L("entity indirection limit exceeded"),
+    XML_L("document's entity expansion limit exceeded")
+#endif
   };
   if (code > 0 && code < sizeof(message)/sizeof(message[0]))
     return message[code];
@@ -2039,6 +2172,18 @@ XML_GetFeatureList(void)
 #endif
 #ifdef XML_ATTR_INFO
     {XML_FEATURE_ATTR_INFO,        XML_L("XML_ATTR_INFO"), 0},
+#endif
+#ifdef XML_BOMB_PROTECTION
+    {XML_FEATURE_BOMB_PROTECTION,  XML_L("XML_FEATURE_BOMB_PROTECTION"), 0},
+    {XML_FEATURE_MAX_ENTITY_INDIRECTIONS,
+     XML_L("XML_FEATURE_MAX_ENTITY_INDIRECTIONS"),
+     XML_DEFAULT_MAX_ENTITY_INDIRECTIONS},
+    {XML_FEATURE_MAX_ENTITY_EXPANSIONS,
+     XML_L("XML_FEATURE_MAX_ENTITY_EXPANSIONS"),
+     XML_DEFAULT_MAX_ENTITY_EXPANSIONS},
+    {XML_FEATURE_RESET_DTD,
+     XML_L("XML_FEATURE_RESET_DTD"),
+     XML_DEFAULT_DTD_RESET},
 #endif
     {XML_FEATURE_END,              NULL, 0}
   };
@@ -2238,9 +2383,15 @@ doContent(XML_Parser parser,
 {
   /* save one level of indirection */
   DTD * const dtd = _dtd;
-
   const char **eventPP;
   const char **eventEndPP;
+
+#ifdef XML_BOMB_PROTECTION
+  if (haveMore) {
+    entityIndirections = 0;
+  }
+#endif
+
   if (enc == encoding) {
     eventPP = &eventPtr;
     eventEndPP = &eventEndPtr;
@@ -3974,6 +4125,11 @@ doProlog(XML_Parser parser,
         endDoctypeDeclHandler(handlerArg);
         handleDefault = XML_FALSE;
       }
+#ifdef XML_BOMB_PROTECTION
+      if (resetDTDFlag) {
+        dtdReset(dtd, &parser->m_mem);
+      }
+#endif
       break;
     case XML_ROLE_INSTANCE_START:
 #ifdef XML_DTD
@@ -4800,6 +4956,22 @@ processInternalEntity(XML_Parser parser, ENTITY *entity,
   enum XML_Error result;
   OPEN_INTERNAL_ENTITY *openEntity;
 
+#ifdef XML_BOMB_PROTECTION
+  if (maxEntityIndirections && (entityIndirections > maxEntityIndirections)) {
+    return XML_ERROR_ENTITY_INDIRECTIONS;
+  }
+  if (maxEntityExpansions) {
+    if (entity->textLen > UINT_MAX - entityExpansions) {
+        /* overflow */
+        return XML_ERROR_ENTITY_EXPANSION;
+    }
+    entityExpansions = entityExpansions + entity->textLen;
+    if (entityExpansions > maxEntityExpansions) {
+      return XML_ERROR_ENTITY_EXPANSION;
+    }
+  }
+#endif
+
   if (freeInternalEntities) {
     openEntity = freeInternalEntities;
     freeInternalEntities = openEntity->next;
@@ -4824,13 +4996,21 @@ processInternalEntity(XML_Parser parser, ENTITY *entity,
 #ifdef XML_DTD
   if (entity->is_param) {
     int tok = XmlPrologTok(internalEncoding, textStart, textEnd, &next);
+#ifdef XML_BOMB_PROTECTION
+    entityIndirections++;
+#endif
     result = doProlog(parser, internalEncoding, textStart, textEnd, tok,
                       next, &next, XML_FALSE);
   }
   else
 #endif /* XML_DTD */
+  {
+#ifdef XML_BOMB_PROTECTION
+    entityIndirections++;
+#endif
     result = doContent(parser, tagLevel, internalEncoding, textStart,
                        textEnd, &next, XML_FALSE);
+  }
 
   if (result == XML_ERROR_NONE) {
     if (textEnd != next && ps_parsing == XML_SUSPENDED) {

@@ -1,0 +1,21 @@
+syntax: glob
+Makefile
+.libs
+*.la
+configure
+config.cache
+config.log
+config.status
+expat_config.h.in
+expat_config.h
+libtool
+expat.ncb
+expat.opt
+.project
+expat.pc
+
+*.o
+*.lo
+*.m4
+conftools/*
+xmlwf/xmlwf

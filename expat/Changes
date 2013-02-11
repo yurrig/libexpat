@@ -1,3 +1,36 @@
+Release 2.2.0
+        - New Features / API changes for XML bomb DoS protections:
+            The new features are only available when XML_BOMB_PROTECTION
+            is defined.
+
+            new definitions:
+              XML_BOMB_PROTECTION
+              XML_DEFAULT_MAX_ENTITY_INDIRECTIONS
+              XML_DEFAULT_MAX_ENTITY_EXPANSIONS
+              XML_DEFAULT_RESET_DTD
+
+            new API functions:
+              int XML_GetFeature(XML_Parser parser,
+                                 enum XML_FeatureEnum feature,
+                                 long *value);
+              int XML_SetFeature(XML_Parser parser,
+                                 enum XML_FeatureEnum feature,
+                                 long value);
+              int XML_GetFeatureDefault(enum XML_FeatureEnum feature,
+                                        long *value);
+              int XML_SetFeatureDefault(enum XML_FeatureEnum feature,
+                                        long value);
+
+            new XML_FeatureEnum members:
+              XML_FEATURE_MAX_ENTITY_INDIRECTIONS
+              XML_FEATURE_MAX_ENTITY_EXPANSIONS
+              XML_FEATURE_RESET_DTD
+
+            new XML_Error members:
+              XML_ERROR_ENTITY_INDIRECTIONS
+              XML_ERROR_ENTITY_EXPANSION
+
+
 Release 2.1.0 Sat March 24 2012
         - Bug Fixes:
           #1742315: Harmful XML_ParserCreateNS suggestion.

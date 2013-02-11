@@ -5,6 +5,18 @@
 #ifndef Expat_INCLUDED
 #define Expat_INCLUDED 1
 
+#ifdef COMPILED_FROM_DSP
+#include "winconfig.h"
+#elif defined(MACOS_CLASSIC)
+#include "macconfig.h"
+#elif defined(__amigaos__)
+#include "amigaconfig.h"
+#elif defined(__WATCOMC__)
+#include "watcomconfig.h"
+#elif defined(HAVE_EXPAT_CONFIG_H)
+#include <expat_config.h>
+#endif /* ndef COMPILED_FROM_DSP */
+
 #ifdef __VMS
 /*      0        1         2         3      0        1         2         3
         1234567890123456789012345678901     1234567890123456789012345678901 */
@@ -96,6 +108,12 @@ enum XML_Error {
   XML_ERROR_RESERVED_PREFIX_XML,
   XML_ERROR_RESERVED_PREFIX_XMLNS,
   XML_ERROR_RESERVED_NAMESPACE_URI
+#ifdef XML_BOMB_PROTECTION
+  /* Added in 2.2. */
+  ,
+  XML_ERROR_ENTITY_INDIRECTIONS,
+  XML_ERROR_ENTITY_EXPANSION
+#endif
 };
 
 enum XML_Content_Type {
@@ -1018,6 +1036,14 @@ enum XML_FeatureEnum {
   XML_FEATURE_NS,
   XML_FEATURE_LARGE_SIZE,
   XML_FEATURE_ATTR_INFO
+#ifdef XML_BOMB_PROTECTION
+  /* Added in 2.2. */
+  ,
+  XML_FEATURE_BOMB_PROTECTION,
+  XML_FEATURE_MAX_ENTITY_INDIRECTIONS,
+  XML_FEATURE_MAX_ENTITY_EXPANSIONS,
+  XML_FEATURE_RESET_DTD
+#endif
   /* Additional features must be added to the end of this enum. */
 };
 
@@ -1029,6 +1055,93 @@ typedef struct {
 
 XMLPARSEAPI(const XML_Feature *)
 XML_GetFeatureList(void);
+
+/* Protection against XML bomb DoS attacks
+   Added in 2.2.
+ */
+#ifdef XML_BOMB_PROTECTION
+
+/* XML_FEATURE_MAX_ENTITY_INDIRECTIONS
+
+   Limit the amount of indirections that are allowed to occur during the
+   expansion of a nested entity. A counter starts when an entity reference
+   is encountered. It resets after the entity is fully expanded. The limit
+   protects the parser against exponential entity expansion attacks (aka
+   billion laughs attack). When the limit is exceeded the parser stops and
+   fails with `XML_ERROR_ENTITY_INDIRECTIONS`.
+   A value of 0 disables the protection.
+
+   Supported range: 0 .. UINT_MAX
+   Default: 40
+ */
+
+#ifndef XML_DEFAULT_MAX_ENTITY_INDIRECTIONS
+#define XML_DEFAULT_MAX_ENTITY_INDIRECTIONS 40
+#endif
+
+/* XML_FEATURE_MAX_ENTITY_EXPANSIONS
+
+   Limit the total length of all entity expansions throughout the entire
+   document. The lengths of all entities are accumulated in a parser variable.
+   The setting protects against quadratic blowup attacks (lots of expansions
+   of a large entity declaration). When the sum of all entities exceeds
+   the limit, the parser stops and fails with `XML_ERROR_ENTITY_EXPANSION`.
+   A value of 0 disables the protection.
+
+   Supported range: 0 .. UINT_MAX
+   Default: 8 MB
+ */
+#ifndef XML_DEFAULT_MAX_ENTITY_EXPANSIONS
+#define XML_DEFAULT_MAX_ENTITY_EXPANSIONS 1 << 23 /* 8 MiB */
+#endif
+
+/* XML_FEATURE_RESET_DTD
+
+   Reset all DTD information after the <!DOCTYPE> block has been parsed. When
+   the flag is set (default: false) all DTD information after the
+   endDoctypeDeclHandler has been called. The flag can be set inside the
+   endDoctypeDeclHandler. Without DTD information any entity reference in
+   the document body leads to a XML_ERROR_UNDEFINED_ENTITY.
+
+   Supported range: 0, 1
+   Default: 0
+ */
+#ifndef XML_DEFAULT_DTD_RESET
+#define XML_DEFAULT_DTD_RESET XML_FALSE
+#endif
+
+#endif /* XML_BOMB_PROTECTION */
+
+
+/* Feature modifiers
+
+   On success the functions shall return 1 and modify or retrieve the value.
+
+   Otherwise, 0 shall be returned and errno set to indicate an error. The
+   value shall not be modified if a function signals an error.
+
+   ENOENT feature is not supported
+   EINVAL  value is invalid and outside the allowed range
+
+   As of now three features are supported with XML_BOMB_PROTECTION available:
+     - XML_FEATURE_MAX_ENTITY_INDIRECTIONS
+     - XML_FEATURE_MAX_ENTITY_EXPANSIONS
+     - XML_FEATURE_RESET_DTD
+
+ */
+
+/* Get / set feature of XML parser instance
+ */
+int XML_GetFeature(XML_Parser parser, enum XML_FeatureEnum feature,
+                   long *value);
+
+int XML_SetFeature(XML_Parser parser, enum XML_FeatureEnum feature,
+                   long value);
+
+/* Get / set global default
+ */
+int XML_GetFeatureDefault(enum XML_FeatureEnum feature, long *value);
+int XML_SetFeatureDefault(enum XML_FeatureEnum feature, long value);
 
 
 /* Expat follows the GNU/Linux convention of odd number minor version for

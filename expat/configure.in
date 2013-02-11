@@ -144,6 +144,8 @@ AC_DEFINE([XML_DTD], 1,
           [Define to make parameter entity parsing functionality available.])
 AC_DEFINE([XML_CONTEXT_BYTES], 1024,
           [Define to specify how much context to retain around the current parse point.])
+AC_DEFINE([XML_BOMB_PROTECTION], 1,
+          [Define to enable protection against XML bomb DoS attacks.])
 
 AC_CONFIG_FILES([Makefile expat.pc])
 AC_OUTPUT

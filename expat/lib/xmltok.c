@@ -2,21 +2,9 @@
    See the file COPYING for copying permission.
 */
 
-#include <stddef.h>
+#include "expat.h"
 
-#ifdef COMPILED_FROM_DSP
-#include "winconfig.h"
-#elif defined(MACOS_CLASSIC)
-#include "macconfig.h"
-#elif defined(__amigaos__)
-#include "amigaconfig.h"
-#elif defined(__WATCOMC__)
-#include "watcomconfig.h"
-#else
-#ifdef HAVE_EXPAT_CONFIG_H
-#include <expat_config.h>
-#endif
-#endif /* ndef COMPILED_FROM_DSP */
+#include <stddef.h>
 
 #include "expat_external.h"
 #include "internal.h"
@@ -1584,7 +1572,7 @@ initScan(const ENCODING * const *encodingTable,
       if (ptr[0] == '\0') {
         /* 0 isn't a legal data character. Furthermore a document
            entity can only start with ASCII characters.  So the only
-           way this can fail to be big-endian UTF-16 if it it's an
+           way this can fail to be big-endian UTF-16 is if it's an
            external parsed general entity that's labelled as
            UTF-16LE.
         */
