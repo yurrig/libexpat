@@ -117,7 +117,9 @@ enum XML_Error {
   /* Added in 2.2.1. */
   XML_ERROR_INVALID_ARGUMENT,
   /* Added in 2.3.0. */
-  XML_ERROR_NO_BUFFER
+  XML_ERROR_NO_BUFFER,
+  /* Added in 2.4.0. */
+  XML_ERROR_INPUT_OUTPUT_RATIO_VIOLATION
 };
 
 enum XML_Content_Type {
