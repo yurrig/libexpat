@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="15.0">
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>EXPAT_PACKAGE_PATH=R"($(MSBuildThisFileDirectory))";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(MSBuildThisFileDirectory)\lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <Target Name="Expat_CopyFiles" BeforeTargets="Build">
+    <!--ItemGroup>
+      <ExpatLibs Include="$(MSBuildThisFileDirectory)lib\$(Configuration)\*.dll;$(MSBuildThisFileDirectory)lib\$(Configuration)\*.pdb"/>
+    </ItemGroup>
+    <Copy SourceFiles="@(ExpatLibs)" DestinationFolder="$(OutDir)\%(RecursiveDir)" SkipUnchangedFiles="true"/-->
+    <Exec Command="ROBOCOPY &quot;$(MSBuildThisFileDirectory)lib\$(Configuration)&quot; &quot;$(OutDir).&quot; *.dll *.pdb /S >NUL" IgnoreExitCode="true"/>
+  </Target>
+</Project>

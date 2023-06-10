@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>Expat</id>
+        <authors>James Clark</authors>
+        <version>2.4.7</version>
+        <description>Fast streaming XML parser.</description>
+        <tags>native nativepackage C++ expat</tags>
+    </metadata>
+    <files>
+        <file src="expat\build\Debug\*"   target="build\native\lib\Debug"  />
+        <file src="expat\build\Release\*" target="build\native\lib\Release"/>
+        <file src="expat\lib\*"           target="build\native\include"    />
+        <file src="expat.props"           target="build\native"            />
+    </files>
+</package>
