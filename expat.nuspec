@@ -11,6 +11,6 @@
         <file src="expat\build\Debug\*"   exclude="**\*.exp;**\*.bak" target="build\native\lib\Debug"  />
         <file src="expat\build\Release\*" exclude="**\*.exp;**\*.bak" target="build\native\lib\Release"/>
         <file src="expat\lib\*"                                       target="build\native\include"    />
-        <file src="expat.props"                                       target="build\native"            />
+        <file src="expat.targets"                                     target="build\native"            />
     </files>
 </package>
