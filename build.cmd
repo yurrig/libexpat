@@ -1,5 +1,6 @@
 setlocal
 call %~dp0..\vc_setup.cmd
+pushd %~dp0expat
 set BUILD=build
 title Configuring Expat
 %CMAKE% -S . -B %BUILD%
@@ -9,6 +10,7 @@ title Done building Expat
 cd ..
 PdbIndexer %DEPS_SOURCE_URL%/libexpat
 NuGet.exe pack expat.nuspec -OutputDirectory %PACKAGES%\nuget_packages
+popd
 endlocal
 
 goto:eof
